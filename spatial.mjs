@@ -14,6 +14,11 @@ export function loadSpatialEngine(){
 export async function startSpatialTracking({THREE,host,root,scene,camera,controls,onStatus,onStop}){
  const XR8=await loadSpatialEngine();await XR8.loadChunk('slam');
  const feed=document.createElement('canvas');feed.className='spatial-feed';host.prepend(feed);
+ // Match the drawing buffer to the displayed camera area before starting XR.
+ function resizeFeed(){const ratio=Math.min(window.devicePixelRatio||1,1.75);const w=Math.max(1,Math.round(host.clientWidth*ratio)),h=Math.max(1,Math.round(host.clientHeight*ratio));if(feed.width!==w)feed.width=w;if(feed.height!==h)feed.height=h}
+ resizeFeed();const feedObserver=new ResizeObserver(resizeFeed);feedObserver.observe(host);
+ window.addEventListener('resize',resizeFeed);window.visualViewport?.addEventListener('resize',resizeFeed);
+
  const bar=document.createElement('div');bar.className='spatial-controls';
  const reset=document.createElement('button');reset.textContent='重設大小與方向';reset.disabled=true;
  const instructions=document.createElement('span');instructions.className='spatial-gesture-hint';instructions.textContent='放置後：雙指捏合縮放・雙指轉動旋轉';
@@ -33,8 +38,8 @@ export async function startSpatialTracking({THREE,host,root,scene,camera,control
  reset.onclick=()=>{scaleFactor=1;yaw=0;gesture=null;if(placed)transform()};
  const hint=text=>{if(lastHint!==text){lastHint=text;onStatus(text)}};
  const initialProjection=camera.projectionMatrix.clone();
- root.visible=false;root.scale.setScalar(modelScale);controls.enabled=false;scene.background=null;document.body.classList.add('ar-mode');
- function stop(){if(!active)return;active=false;clearTimeout(timer);XR8.stop();XR8.clearCameraPipelineModules();feed.remove();bar.remove();host.removeEventListener('pointerup',tap);host.removeEventListener('touchstart',beginGesture);host.removeEventListener('touchmove',moveGesture);host.removeEventListener('touchend',endGesture);host.removeEventListener('touchcancel',endGesture);root.visible=true;root.scale.setScalar(1);root.position.set(0,0,0);root.quaternion.identity();camera.projectionMatrix.copy(initialProjection);camera.projectionMatrixInverse.copy(initialProjection).invert();scene.background=new THREE.Color('#e5e9dc');controls.enabled=true;document.body.classList.remove('ar-mode');onStatus('');onStop();}
+ root.visible=false;root.scale.setScalar(modelScale);controls.enabled=false;scene.background=null;document.body.classList.add('ar-mode');resizeFeed();
+ function stop(){if(!active)return;active=false;clearTimeout(timer);XR8.stop();XR8.clearCameraPipelineModules();feedObserver.disconnect();window.removeEventListener('resize',resizeFeed);window.visualViewport?.removeEventListener('resize',resizeFeed);feed.remove();bar.remove();host.removeEventListener('pointerup',tap);host.removeEventListener('touchstart',beginGesture);host.removeEventListener('touchmove',moveGesture);host.removeEventListener('touchend',endGesture);host.removeEventListener('touchcancel',endGesture);root.visible=true;root.scale.setScalar(1);root.position.set(0,0,0);root.quaternion.identity();camera.projectionMatrix.copy(initialProjection);camera.projectionMatrixInverse.copy(initialProjection).invert();scene.background=new THREE.Color('#e5e9dc');controls.enabled=true;document.body.classList.remove('ar-mode');onStatus('');onStop();}
  function placeAt(x=.5,y=.5){
   if(!hasPose){hint('相機正在建立定位，請慢慢移動手機，稍後再按放置。');return}
   let hits=[];if(normal)try{hits=XR8.XrController.hitTest(x,y)||[]}catch{}
@@ -49,7 +54,7 @@ export async function startSpatialTracking({THREE,host,root,scene,camera,control
  XR8.addCameraPipelineModules([XR8.GlTextureRenderer.pipelineModule(),XR8.XrController.pipelineModule(),{
   name:'picdance-spatial',
   onStart:()=>{clearTimeout(timer);camera.position.set(0,0,0);camera.quaternion.identity();XR8.XrController.updateCameraProjectionMatrix({origin:camera.position,facing:camera.quaternion});hint('將鏡頭朝向桌面或地面，慢慢移動手機建立追蹤。')},
-  onCanvasSizeChange:({canvasWidth,canvasHeight})=>{feed.width=canvasWidth;feed.height=canvasHeight},
+
   onUpdate:({processCpuResult})=>{
    if(!active)return;const pose=processCpuResult.reality;if(!pose)return;
    if(!pose.position||!pose.rotation||!pose.intrinsics||pose.intrinsics.length!==16||!Array.from(pose.intrinsics).every(Number.isFinite))return;
