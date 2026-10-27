@@ -9,6 +9,7 @@ import {dancerMotion} from './motion.mjs';
 export function Stage({works,serverOffset,energy,enterAR,resetView,onAR,onStatus}){
  const host=useRef(null),state=useRef(null),latest=useRef(works);latest.current=works;const offsetRef=useRef(serverOffset);offsetRef.current=serverOffset;
  useEffect(()=>{
+  document.body.classList.remove('ar-mode');
   const el=host.current;let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});}catch{onStatus('這台裝置無法開啟 3D，請使用支援 WebGL 的瀏覽器。');onAR('AR 不支援');return;}
   let modelReady=false,spatialStop=null,spatialActive=false,starting=false;let alive=true;renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;renderer.xr.enabled=true;el.appendChild(renderer.domElement);
   const scene=new THREE.Scene();scene.background=new THREE.Color('#e5e9dc');const camera=new THREE.PerspectiveCamera(38,1,.01,400);camera.position.set(36,32,47);const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,1,-1);controls.enableDamping=true;controls.minDistance=16;controls.maxDistance=100;controls.maxPolarAngle=Math.PI*.47;controls.enablePan=false;
