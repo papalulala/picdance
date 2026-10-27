@@ -1,33 +1,29 @@
-# picdance · 木都繪舞
+# 畫一個你，讓木都跳起來 · picdance AR
 
-嘉義木都的多人繪圖派對：畫出自己的角色，送入 3D 小鎮，沿隨機路線跳舞並做波浪扭動。
+## GitHub Pages 網站
 
-## 網站原始碼
+本儲存庫根目錄包含可直接透過 GitHub Pages 發布的網站檔案，不必解壓縮。
+預計網址：https://papalulala.github.io/picdance/
 
-下載本儲存庫的 **picdance-source.zip**，解壓縮後進入 `picdance` 資料夾。
-這是完整可還原的網站專案，包含 123 個程式、設定與素材檔案；不是已部署的網站。
+- Three.js 嘉義木都場景，包含最新模型與單行標題。
+- 自由繪圖，作品沿不同路線遊走並做波浪舞動。
+- 多人共享作品：60 秒到期、最多 30 張、滿額淘汰最早作品。
+- WebXR AR：支援裝置可將小鎮放到真實平面；不支援時保留一般 3D 瀏覽。
 
-- Three.js 3D 木都場景，含樹木、山丘及原有建築模型。
-- Canvas 自由繪圖，支援畫筆、顏色、橡皮擦、復原與清空。
-- 多人共享作品，每張約 60 秒，最多 30 張，滿額淘汰最早作品。
-- 同步的隨機遊走路線、波浪變形與本機音樂節奏互動。
-- WebXR AR 入口，需支援的裝置與瀏覽器；實機 AR 尚待驗證。
-- 主標題採深綠色平面單色字形。
+## 發布方式
 
-## 開發與部署
+Settings → Pages → Deploy from a branch → main → /(root)。
+GitHub Pages 提供前端網頁；作品同步由既有的公開後端服務提供。這個版本不把瀏覽器本機資料當作多人同步。
 
-需要 Node.js 22.13 以上及 npm，於解壓縮後的專案執行：
+## 編輯原始碼
+
+Page.tsx、stage.tsx、motion.mjs、style.css、main.tsx 為可編輯程式碼。
+index.template.html 為建置入口；index.html 為已建置的 Pages 入口。
 
 ```sh
-npm ci
+npm install
 npm run build
 ```
 
-專案使用 Sites / Cloudflare Workers + D1。請依內附 README 與資料庫遷移設定啟動。
-GitHub Pages 僅提供靜態網頁，無法單獨執行此專案的多人伺服器。
-
-## 驗證
-
-網站建置與 TypeScript 檢查通過；本機已測試繪圖送出、30 張上限、最早作品淘汰、重試去重，以及平滑路線的範圍限制。
-
-網站套件、本機資料庫、暫存與憑證未包含於壓縮包。
+建置結果位於 dist，發布時將 dist 內容更新到儲存庫根目錄。
+需要 Node.js 22.13 以上。AR 需 HTTPS、支援 WebXR 的裝置與使用者相機授權；尚未完成實機 AR 測試。

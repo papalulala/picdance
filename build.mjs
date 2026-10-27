@@ -1,0 +1,1 @@
+import {build} from 'vite';import fs from 'node:fs';await build({configFile:false,base:'./',publicDir:false,build:{outDir:'dist',emptyOutDir:true,assetsDir:'',rollupOptions:{input:'index.template.html'}}});fs.renameSync('dist/index.template.html','dist/index.html');fs.copyFileSync('chiayi-v3.glb','dist/chiayi-v3.glb');fs.writeFileSync('dist/.nojekyll','');
