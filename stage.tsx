@@ -64,7 +64,7 @@ export function Stage({works,serverOffset,energy,enterAR,resetView,onAR,onStatus
     d.uniforms.waveTime.value=motion.waveTime;d.uniforms.waveStrength.value=motion.waveStrength;
     const fade=Math.min(1,age*3,Math.max(0,(60-age)*2));
     d.mesh.scale.setScalar(fade*(1+Math.sin(age*5+d.sequence)*e*.1));
-    d.mesh.quaternion.copy(renderer.xr.isPresenting?renderer.xr.getCamera().quaternion:camera.quaternion);
+    root.getWorldQuaternion(d.mesh.quaternion).invert().multiply(renderer.xr.isPresenting?renderer.xr.getCamera().quaternion:camera.quaternion);
     d.mesh.rotateZ(motion.roll);
    }renderer.render(scene,camera);});
   return()=>{alive=false;spatialStop?.();document.body.classList.remove('ar-mode');session?.end();ro.disconnect();renderer.setAnimationLoop(null);controls.dispose();dispose(root);dispose(reticle);renderer.dispose();renderer.domElement.remove();enterAR.current=null;resetView.current=null;state.current=null;};

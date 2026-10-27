@@ -19,3 +19,5 @@ body.ar-mode{background:transparent}body.ar-mode .scene{background:transparent}b
 /* Keep the WebGL layer inside the scene, below ordinary controls. */
 .scene{z-index:0}.intro,header,.draw-panel,footer{z-index:2}.connection{z-index:3}
 body.ar-mode{overflow:hidden}body.ar-mode main{height:100dvh;min-height:0;padding:0;overflow:hidden}body.ar-mode .scene{position:fixed;inset:0;width:100vw;height:100dvh;min-height:0;z-index:0}body.ar-mode .stage-canvas{position:relative;width:100%;height:100%}
+
+.spatial-gesture-hint{flex-basis:100%;color:#244134;background:#f5f5e8ed;border-radius:12px;padding:8px 12px;font-size:12px;pointer-events:none}.spatial-controls button:disabled{opacity:.5}
