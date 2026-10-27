@@ -27,3 +27,9 @@ npm run build
 
 建置結果位於 dist，發布時將 dist 內容更新到儲存庫根目錄。
 需要 Node.js 22.13 以上。AR 需 HTTPS、支援 WebXR 的裝置與使用者相機授權；尚未完成實機 AR 測試。
+
+## 即時空間 AR
+使用 iPhone Safari 或 Android Chrome，按「開啟空間 AR」，允許相機、掃描環境後點選放置。保留原本 Three.js 動畫、波浪扭動及多人作品同步，不使用快照。
+使用 8th Wall Engine Binary 1.0.0（Niantic Spatial），按需自官方 CDN 載入 SLAM；授權見 XR-LICENSE.txt。特徵點定位是估計表面，不保證桌面精確辨識。光線不足、反光或單色表面會影響追蹤。
+手機實機追蹤效果仍需 iPhone 和 Android 測試。
+
