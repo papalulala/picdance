@@ -29,7 +29,7 @@ export function townLighting(renderer,scene,mobile=false){
  function isWindow(mesh,material){
   const name=mesh.name.replace(/[\s.]/g,'_');
   if(/^pink_building__Wide_center_inset_0$|^pink_building__Tower_dark_inset_486_1$/.test(name))return true;
-  let node=mesh;while(node){if(node.name.startsWith('04_solar_townhouse')&&material.name==='glass')return true;if(node.name.startsWith('06_wooden_hut')&&material.name==='dark.001')return true;node=node.parent;}
+  let node=mesh;while(node){if(node.name.startsWith('01_traditional_house')&&material.name==='cream')return true;if(node.name.startsWith('04_solar_townhouse')&&material.name==='glass')return true;if(node.name.startsWith('06_wooden_hut')&&material.name==='dark.001')return true;node=node.parent;}
   return false;
  }
  function attach(town){
