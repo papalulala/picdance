@@ -21,7 +21,7 @@ export async function startSpatialTracking({THREE,host,root,scene,camera,control
 
  const bar=document.createElement('div');bar.className='spatial-controls';
  const reset=document.createElement('button');reset.textContent='重設大小與方向';reset.disabled=true;
- const instructions=document.createElement('span');instructions.className='spatial-gesture-hint';instructions.textContent='放置後：雙指捏合縮放・雙指轉動旋轉';
+ const instructions=document.createElement('span');instructions.className='spatial-gesture-hint';instructions.textContent='放置後：單指左右拖曳旋轉・雙指捏合縮放';
  const place=document.createElement('button'),exit=document.createElement('button'),credit=document.createElement('a');
  place.textContent='在畫面中央放置木都';exit.textContent='退出 AR';credit.textContent='Niantic Spatial · 授權';credit.href='./XR-LICENSE.txt';credit.target='_blank';bar.append(place,reset,exit,instructions,credit);document.body.append(bar);
  let active=true,placed=false,normal=false,hasPose=false,lastHint='',timer;
@@ -30,16 +30,28 @@ export async function startSpatialTracking({THREE,host,root,scene,camera,control
  const pivot=new THREE.Vector3(center.x,bounds.min.y,center.z),anchor=new THREE.Vector3();
  let scaleFactor=1,yaw=0,gesture=null;
  function transform(){root.scale.setScalar(modelScale*scaleFactor);root.rotation.set(0,yaw,0);root.position.copy(anchor).sub(pivot.clone().multiplyScalar(modelScale*scaleFactor).applyQuaternion(root.quaternion))}
- function pair(touches){const dx=touches[1].clientX-touches[0].clientX,dy=touches[1].clientY-touches[0].clientY;return {distance:Math.hypot(dx,dy),angle:Math.atan2(dy,dx)}}
- function beginGesture(e){if(!placed||e.touches.length!==2){gesture=null;return}e.preventDefault();const p=pair(e.touches);gesture=p.distance>5?{...p,scale:scaleFactor,yaw}:null}
- function moveGesture(e){if(!placed||e.touches.length!==2){gesture=null;return}e.preventDefault();if(!gesture){beginGesture(e);return}const p=pair(e.touches);scaleFactor=Math.min(4,Math.max(.2,gesture.scale*p.distance/gesture.distance));const delta=p.angle-gesture.angle;yaw=gesture.yaw+Math.atan2(Math.sin(delta),Math.cos(delta));transform()}
- function endGesture(e){gesture=null;if(e.touches.length===2)beginGesture(e)}
- host.addEventListener('touchstart',beginGesture,{passive:false});host.addEventListener('touchmove',moveGesture,{passive:false});host.addEventListener('touchend',endGesture);host.addEventListener('touchcancel',endGesture);
+ function distance(touches){return Math.hypot(touches[1].clientX-touches[0].clientX,touches[1].clientY-touches[0].clientY)}
+ function beginGesture(e){
+  gesture=null;if(!placed)return;
+  if(e.touches.length===1){e.preventDefault();gesture={mode:'rotate',x:e.touches[0].clientX,yaw};}
+  else if(e.touches.length===2){e.preventDefault();const d=distance(e.touches);if(d>5)gesture={mode:'scale',distance:d,scale:scaleFactor};}
+ }
+ function moveGesture(e){
+  if(!placed)return;const mode=e.touches.length===1?'rotate':e.touches.length===2?'scale':null;
+  if(!mode){gesture=null;return}e.preventDefault();
+  if(!gesture||gesture.mode!==mode){beginGesture(e);return}
+  if(mode==='rotate')yaw=gesture.yaw+(e.touches[0].clientX-gesture.x)*Math.PI/Math.max(host.clientWidth,240);
+  else scaleFactor=Math.min(4,Math.max(.2,gesture.scale*distance(e.touches)/gesture.distance));
+  transform();
+ }
+ function endGesture(e){beginGesture(e)}
+ function cancelGesture(){gesture=null}
+ host.addEventListener('touchstart',beginGesture,{passive:false});host.addEventListener('touchmove',moveGesture,{passive:false});host.addEventListener('touchend',endGesture,{passive:false});host.addEventListener('touchcancel',cancelGesture);
  reset.onclick=()=>{scaleFactor=1;yaw=0;gesture=null;if(placed)transform()};
  const hint=text=>{if(lastHint!==text){lastHint=text;onStatus(text)}};
  const initialProjection=camera.projectionMatrix.clone();
  root.visible=false;root.scale.setScalar(modelScale);controls.enabled=false;scene.background=null;document.body.classList.add('ar-mode');resizeFeed();
- function stop(){if(!active)return;active=false;clearTimeout(timer);XR8.stop();XR8.clearCameraPipelineModules();feedObserver.disconnect();window.removeEventListener('resize',resizeFeed);window.visualViewport?.removeEventListener('resize',resizeFeed);feed.remove();bar.remove();host.removeEventListener('pointerup',tap);host.removeEventListener('touchstart',beginGesture);host.removeEventListener('touchmove',moveGesture);host.removeEventListener('touchend',endGesture);host.removeEventListener('touchcancel',endGesture);root.visible=true;root.scale.setScalar(1);root.position.set(0,0,0);root.quaternion.identity();camera.projectionMatrix.copy(initialProjection);camera.projectionMatrixInverse.copy(initialProjection).invert();scene.background=new THREE.Color('#e5e9dc');controls.enabled=true;document.body.classList.remove('ar-mode');onStatus('');onStop();}
+ function stop(){if(!active)return;active=false;clearTimeout(timer);XR8.stop();XR8.clearCameraPipelineModules();feedObserver.disconnect();window.removeEventListener('resize',resizeFeed);window.visualViewport?.removeEventListener('resize',resizeFeed);feed.remove();bar.remove();host.removeEventListener('pointerup',tap);host.removeEventListener('touchstart',beginGesture);host.removeEventListener('touchmove',moveGesture);host.removeEventListener('touchend',endGesture);host.removeEventListener('touchcancel',cancelGesture);root.visible=true;root.scale.setScalar(1);root.position.set(0,0,0);root.quaternion.identity();camera.projectionMatrix.copy(initialProjection);camera.projectionMatrixInverse.copy(initialProjection).invert();scene.background=new THREE.Color('#e5e9dc');controls.enabled=true;document.body.classList.remove('ar-mode');onStatus('');onStop();}
  function placeAt(x=.5,y=.5){
   if(!hasPose){hint('相機正在建立定位，請慢慢移動手機，稍後再按放置。');return}
   let hits=[];if(normal)try{hits=XR8.XrController.hitTest(x,y)||[]}catch{}
