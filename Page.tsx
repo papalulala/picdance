@@ -1,8 +1,18 @@
 "use client";
 import {useEffect,useRef,useState} from 'react';
+import type {CSSProperties} from 'react';
 import {Stage} from './stage';
 type Artwork={id:string;image:string;createdAt:number;seq:number};
 const colors=['#203e31','#ffffff','#ed684a','#e4b54e','#65a088','#6a91b6','#9977a9','#714d32'];
+function TitleFireflies(){
+ const [dots,setDots]=useState<{id:number;x:number;y:number;size:number;drift:number;duration:number}[]>([]);
+ useEffect(()=>{
+  const motion=window.matchMedia('(prefers-reduced-motion: reduce)');let timer:ReturnType<typeof setTimeout>;let id=0;
+  const spawn=()=>{if(!motion.matches){const dot={id:++id,x:5+Math.random()*90,y:24+Math.random()*55,size:1.5+Math.random(),drift:(Math.random()-.5)*9,duration:1.8+Math.random()*1.2};setDots(previous=>[...previous.slice(-3),dot]);}timer=setTimeout(spawn,700+Math.random()*1300);};
+  timer=setTimeout(spawn,500);return()=>clearTimeout(timer);
+ },[]);
+ return <span className="title-fireflies" aria-hidden="true">{dots.map(dot=><i key={dot.id} className="title-firefly" style={{left:dot.x+'%',top:dot.y+'%',width:dot.size,height:dot.size,'--firefly-drift':dot.drift+'px',animationDuration:dot.duration+'s'} as CSSProperties}/>)}</span>;
+}
 export default function Page(){
  const canvas=useRef<HTMLCanvasElement>(null),drawing=useRef(false),last=useRef<{x:number,y:number}|null>(null),history=useRef<ImageData[]>([]),pendingId=useRef<string|null>(null),sendLock=useRef(false),lastSubmittedImage=useRef<string|null>(null);
  const [color,setColor]=useState(colors[0]),[size,setSize]=useState(9),[eraser,setEraser]=useState(false),[dirty,setDirty]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[works,setWorks]=useState<Artwork[]>([]),[online,setOnline]=useState(false),[room,setRoom]=useState('chiayi'),[clock,setClock]=useState(0),[now,setNow]=useState(Date.now()),[help,setHelp]=useState(false),[panel,setPanel]=useState(true),[audioName,setAudioName]=useState(''),[playing,setPlaying]=useState(false),[arStatus,setArStatus]=useState('正在檢查 AR'),[sceneStatus,setSceneStatus]=useState('正在走進木都…');
@@ -37,7 +47,7 @@ export default function Page(){
  return <main>
   <svg className="lettering-filters" width="0" height="0" aria-hidden="true" focusable="false"><defs><filter id="mudu-title-wave" x="-10%" y="-20%" width="120%" height="140%" colorInterpolationFilters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.004" numOctaves="1" seed="4" result="title-noise"><animate attributeName="baseFrequency" values="0.012 0.004;0.018 0.006;0.012 0.004" dur="6s" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="title-noise" scale="3" xChannelSelector="R" yChannelSelector="G"/></filter></defs></svg>
   <div className="scene"><Stage works={visible} serverOffset={clock} energy={energy} enterAR={enterAR} resetView={resetView} onAR={setArStatus} onStatus={setSceneStatus}/></div>
-  <header><a className="brand brand-headline" href="./" aria-label="木都繪舞"><span className="brand-title-text" aria-hidden="true" /></a><div className="room"><i className={online?'live':''}/>{online?'共同場景已連線':'正在連接共同場景'}<b>嘉義木都</b></div><button className="round" onClick={()=>setHelp(true)} aria-label="玩法說明">?</button></header>
+  <header><a className="brand brand-headline" href="./" aria-label="木都繪舞"><span className="brand-title-text" aria-hidden="true" /><TitleFireflies/></a><div className="room"><i className={online?'live':''}/>{online?'共同場景已連線':'正在連接共同場景'}<b>嘉義木都</b></div><button className="round" onClick={()=>setHelp(true)} aria-label="玩法說明">?</button></header>
   <section className="intro"><div className="eyebrow">CHIAYI · A LITTLE CITY OF IMAGINATION</div><h1 className="sr-only">木都繪舞</h1><p className="tagline-lettering"><span className="sr-only">一筆想像，三分鐘的相遇。</span><span className="tagline-art" aria-hidden="true"/></p><div className="count"><span className="pulse"/>{visible.length}<small> / 50 位小小舞者</small></div></section>
   <aside className={'draw-panel '+(!panel?'collapsed':'')}><div className="panel-heading"><div><span className="eyebrow">YOUR LITTLE DANCER</span><h2>今天，想畫什麼？</h2></div><button className="text-button" onClick={()=>setPanel(!panel)}>{panel?'收起':'開始畫畫 ↗'}</button></div><div className="panel-content"><div className="canvas-wrap"><canvas ref={canvas} width={512} height={512} aria-label="自由繪圖板" onPointerDown={e=>stroke(e,true)} onPointerMove={e=>stroke(e)} onPointerUp={()=>{drawing.current=false;last.current=null;recalc()}} onPointerCancel={()=>{drawing.current=false;last.current=null;recalc()}}/>{!dirty&&<div className="canvas-hint"><span>✳</span>在這裡畫下你的想像<small>滑鼠或手指都可以</small></div>}</div>
   <div className="palette">{colors.map(c=><button key={c} aria-label={'畫筆顏色 '+c} aria-pressed={!eraser&&color===c} style={{background:c}} className={!eraser&&color===c?'selected':''} onClick={()=>{setColor(c);setEraser(false)}} disabled={busy}/>)}</div>

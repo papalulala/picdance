@@ -38,3 +38,7 @@ body.ar-mode{overflow:hidden}body.ar-mode main{height:100dvh;min-height:0;paddin
 .brand .brand-title-text{filter:url('#mudu-title-wave');transform-origin:50% 75%;animation:mudu-title-bob 3.6s ease-in-out infinite}
 @keyframes mudu-title-bob{0%,100%{transform:translateY(0) rotate(-.35deg)}35%{transform:translateY(-2px) rotate(.35deg)}65%{transform:translateY(1px) rotate(-.15deg)}}
 @media(prefers-reduced-motion:reduce){.brand .brand-title-text{animation:none;filter:none;transform:none}}
+.title-fireflies{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.title-firefly{position:absolute;display:block;border-radius:50%;background:#f4d34f;box-shadow:0 0 2px #efcc4c70;opacity:0;pointer-events:none;animation:title-firefly-hop 2.4s ease-in-out both}
+@keyframes title-firefly-hop{0%{opacity:0;transform:translate(0,2px)}22%{opacity:.95;transform:translate(1px,-2px)}48%{opacity:.75;transform:translate(-1px,-5px)}68%{opacity:.9;transform:translate(var(--firefly-drift),-8px)}100%{opacity:0;transform:translate(var(--firefly-drift),-12px)}}
+@media(prefers-reduced-motion:reduce){.title-fireflies{display:none}.title-firefly{animation:none}}
