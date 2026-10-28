@@ -67,7 +67,7 @@ export function Stage({works,serverOffset,energy,enterAR,resetView,onAR,onStatus
     d.mesh.scale.setScalar(fade*(1+Math.sin(age*5+d.sequence)*e*.1));
     root.getWorldQuaternion(d.mesh.quaternion).invert().multiply(renderer.xr.isPresenting?renderer.xr.getCamera().quaternion:camera.quaternion);
     d.mesh.rotateZ(motion.roll);
-   }lights.update(root);renderer.render(scene,camera);});
+   }lights.update(root,t,renderer.xr.isPresenting||spatialActive);renderer.render(scene,camera);});
   return()=>{alive=false;spatialStop?.();document.body.classList.remove('ar-mode');session?.end();ro.disconnect();renderer.setAnimationLoop(null);controls.dispose();lights.dispose();dispose(root);dispose(reticle);renderer.dispose();renderer.domElement.remove();enterAR.current=null;resetView.current=null;state.current=null;};
  },[]);
  return <div className="stage-canvas" ref={host}/>;
