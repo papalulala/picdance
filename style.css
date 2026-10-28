@@ -30,3 +30,6 @@ body.ar-mode{overflow:hidden}body.ar-mode main{height:100dvh;min-height:0;paddin
 .intro>p.tagline-lettering{width:320px;max-width:calc(100vw - 46px);height:42px;margin-top:8px;font-size:0;line-height:0;letter-spacing:0}
 .tagline-art{display:block;width:100%;height:100%;background:#244134;mask:url('./mudu-tagline.png') center/100% auto no-repeat;-webkit-mask:url('./mudu-tagline.png') center/100% auto no-repeat}
 @media(max-width:640px){.brand.brand-headline{width:min(52vw,210px)}.brand .brand-title-text{width:100%;height:54px}.intro{top:106px}.intro>p.tagline-lettering{width:min(78vw,290px);height:36px}}
+
+.intro>p.tagline-lettering{width:160px;height:21px}@media(max-width:640px){.intro>p.tagline-lettering{width:145px;height:18px}}
+
