@@ -8,7 +8,7 @@ function TitleFireflies(){
  const [dots,setDots]=useState<{id:number;x:number;y:number;size:number;drift:number;duration:number}[]>([]);
  useEffect(()=>{
   const motion=window.matchMedia('(prefers-reduced-motion: reduce)');let timer:ReturnType<typeof setTimeout>;let id=0;
-  const spawn=()=>{if(!motion.matches){const dot={id:++id,x:5+Math.random()*90,y:24+Math.random()*55,size:1.5+Math.random(),drift:(Math.random()-.5)*9,duration:1.8+Math.random()*1.2};setDots(previous=>[...previous.slice(-3),dot]);}timer=setTimeout(spawn,700+Math.random()*1300);};
+  const spawn=()=>{if(!motion.matches){const dot={id:++id,x:5+Math.random()*90,y:24+Math.random()*55,size:(1.5+Math.random())*3,drift:(Math.random()-.5)*9,duration:1.8+Math.random()*1.2};setDots(previous=>[...previous.slice(-3),dot]);}timer=setTimeout(spawn,700+Math.random()*1300);};
   timer=setTimeout(spawn,500);return()=>clearTimeout(timer);
  },[]);
  return <span className="title-fireflies" aria-hidden="true">{dots.map(dot=><i key={dot.id} className="title-firefly" style={{left:dot.x+'%',top:dot.y+'%',width:dot.size,height:dot.size,'--firefly-drift':dot.drift+'px',animationDuration:dot.duration+'s'} as CSSProperties}/>)}</span>;
