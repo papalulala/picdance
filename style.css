@@ -33,3 +33,8 @@ body.ar-mode{overflow:hidden}body.ar-mode main{height:100dvh;min-height:0;paddin
 
 .intro>p.tagline-lettering{width:160px;height:21px}@media(max-width:640px){.intro>p.tagline-lettering{width:145px;height:18px}}
 
+
+.lettering-filters{position:absolute;pointer-events:none;overflow:hidden}
+.brand .brand-title-text{filter:url('#mudu-title-wave');transform-origin:50% 75%;animation:mudu-title-bob 3.6s ease-in-out infinite}
+@keyframes mudu-title-bob{0%,100%{transform:translateY(0) rotate(-.35deg)}35%{transform:translateY(-2px) rotate(.35deg)}65%{transform:translateY(1px) rotate(-.15deg)}}
+@media(prefers-reduced-motion:reduce){.brand .brand-title-text{animation:none;filter:none;transform:none}}
