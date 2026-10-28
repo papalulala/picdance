@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {startSpatialTracking} from './spatial.mjs';
+import {townLighting} from './lighting.mjs';
 import {dancerMotion} from './motion.mjs';
 export function Stage({works,serverOffset,energy,enterAR,resetView,onAR,onStatus}){
  const host=useRef(null),state=useRef(null),latest=useRef(works);latest.current=works;const offsetRef=useRef(serverOffset);offsetRef.current=serverOffset;
@@ -13,7 +14,7 @@ export function Stage({works,serverOffset,energy,enterAR,resetView,onAR,onStatus
   const el=host.current;let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});}catch{onStatus('這台裝置無法開啟 3D，請使用支援 WebGL 的瀏覽器。');onAR('AR 不支援');return;}
   let modelReady=false,spatialStop=null,spatialActive=false,starting=false;let alive=true;renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;renderer.xr.enabled=true;el.appendChild(renderer.domElement);
   const scene=new THREE.Scene();scene.background=new THREE.Color('#e5e9dc');const camera=new THREE.PerspectiveCamera(38,1,.01,400);camera.position.set(36,32,47);const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,1,-1);controls.enableDamping=true;controls.minDistance=16;controls.maxDistance=100;controls.maxPolarAngle=Math.PI*.47;controls.enablePan=false;
-  const root=new THREE.Group();scene.add(root);scene.add(new THREE.HemisphereLight(0xffffec,0x668475,2.8));const sun=new THREE.DirectionalLight(0xfff1da,3);sun.position.set(-20,35,20);scene.add(sun);
+  const root=new THREE.Group();scene.add(root);const lights=townLighting(renderer,scene,/Android|iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1));
   const dancers=new Map(),loader=new THREE.TextureLoader();const s={root,dancers,loader};state.current=s;
   function dispose(o){o.traverse?.(m=>{m.geometry?.dispose();for(const material of (Array.isArray(m.material)?m.material:[m.material])){material?.map?.dispose();material?.dispose()}})}
   function sync(){
@@ -39,7 +40,7 @@ export function Stage({works,serverOffset,energy,enterAR,resetView,onAR,onStatus
     loader.load(w.image,tex=>{if(!alive||!dancers.has(w.id)){tex.dispose();return}tex.colorSpace=THREE.SRGBColorSpace;material.map=tex;material.needsUpdate=true;},undefined,()=>{if(alive)onStatus('部分作品載入失敗，請重新整理。')});
    }
   }
-  new GLTFLoader().load(new URL('./chiayi-v4.glb',document.baseURI).href,g=>{if(!alive){dispose(g.scene);return}root.add(g.scene);modelReady=true;onStatus('');},undefined,()=>{if(alive)onStatus('小鎮載入失敗，請重新整理再試。')});
+  new GLTFLoader().load(new URL('./chiayi-v4.glb',document.baseURI).href,g=>{if(!alive){dispose(g.scene);return}root.add(g.scene);lights.attach(g.scene);modelReady=true;onStatus('');},undefined,()=>{if(alive)onStatus('小鎮載入失敗，請重新整理再試。')});
   const resize=()=>{const w=el.clientWidth,h=el.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()};resize();const ro=new ResizeObserver(resize);ro.observe(el);
   resetView.current=()=>{if(renderer.xr.isPresenting)return;camera.position.set(36,32,47);controls.target.set(0,1,-1);controls.update()};
   let session=null,hitSource=null,reference=null,placed=false;const reticle=new THREE.Mesh(new THREE.RingGeometry(.08,.10,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xdee9ae}));reticle.matrixAutoUpdate=false;reticle.visible=false;scene.add(reticle);
@@ -66,8 +67,8 @@ export function Stage({works,serverOffset,energy,enterAR,resetView,onAR,onStatus
     d.mesh.scale.setScalar(fade*(1+Math.sin(age*5+d.sequence)*e*.1));
     root.getWorldQuaternion(d.mesh.quaternion).invert().multiply(renderer.xr.isPresenting?renderer.xr.getCamera().quaternion:camera.quaternion);
     d.mesh.rotateZ(motion.roll);
-   }renderer.render(scene,camera);});
-  return()=>{alive=false;spatialStop?.();document.body.classList.remove('ar-mode');session?.end();ro.disconnect();renderer.setAnimationLoop(null);controls.dispose();dispose(root);dispose(reticle);renderer.dispose();renderer.domElement.remove();enterAR.current=null;resetView.current=null;state.current=null;};
+   }lights.update(root);renderer.render(scene,camera);});
+  return()=>{alive=false;spatialStop?.();document.body.classList.remove('ar-mode');session?.end();ro.disconnect();renderer.setAnimationLoop(null);controls.dispose();lights.dispose();dispose(root);dispose(reticle);renderer.dispose();renderer.domElement.remove();enterAR.current=null;resetView.current=null;state.current=null;};
  },[]);
  return <div className="stage-canvas" ref={host}/>;
 }
