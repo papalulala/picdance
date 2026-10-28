@@ -24,13 +24,27 @@ export function townLighting(renderer,scene,mobile=false){
  scene.add(ambient,sun,sun.target);
  let sphere=null,lastMatrix=null,lastShadow=-Infinity,mode=null,cycleStart=null;
  const center=new THREE.Vector3(),scale=new THREE.Vector3(),direction=new THREE.Vector3(-.65,1,.6).normalize();
+ const windows=[],windowMeshes=[],windowColor=new THREE.Color(0xffcd82);
+ function clearWindows(){for(const item of windowMeshes)item.mesh.material=item.original;for(const item of windows)item.material.dispose();windows.length=0;windowMeshes.length=0;}
+ function isWindow(mesh,material){
+  const name=mesh.name.replace(/[\s.]/g,'_');
+  if(/^pink_building__Wide_center_inset_0$|^pink_building__Tower_dark_inset_486_1$/.test(name))return true;
+  let node=mesh;while(node){if(node.name.startsWith('04_solar_townhouse')&&material.name==='glass')return true;if(node.name.startsWith('06_wooden_hut')&&material.name==='dark.001')return true;node=node.parent;}
+  return false;
+ }
  function attach(town){
-  town.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+  clearWindows();
+  town.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;
+   const original=o.material,materials=Array.isArray(original)?original:[original];let changed=false;
+   const replacements=materials.map(material=>{if(!material?.emissive||!isWindow(o,material))return material;const copy=material.clone();windows.push({material:copy,color:copy.color.clone(),emissive:copy.emissive.clone(),intensity:copy.emissiveIntensity});changed=true;return copy;});
+   if(changed){windowMeshes.push({mesh:o,original});o.material=Array.isArray(original)?replacements:replacements[0];}
+  }});
   sphere=new THREE.Box3().setFromObject(town).getBoundingSphere(new THREE.Sphere());lastMatrix=null;
  }
  function update(root,time=0,ar=true){
   const switched=mode!==ar;mode=ar;
   if(cycleStart===null)cycleStart=time;
+  let windowGlow=0;
   if(ar){
    // Restore the exact pre-cycle lighting for both spatial and WebXR AR.
    if(switched){ambient.color.set(0xffffec);ambient.groundColor.set(0x668475);ambient.intensity=1.9;sun.color.set(0xfff1da);sun.intensity=3.2;direction.set(-.65,1,.6).normalize();}
@@ -40,7 +54,9 @@ export function townLighting(renderer,scene,mobile=false){
    ambient.color.copy(day.a.sky).lerp(day.b.sky,day.blend);ambient.groundColor.copy(day.a.ground).lerp(day.b.ground,day.blend);ambient.intensity=day.fill;
    if(scene.background?.isColor)scene.background.copy(day.a.bg).lerp(day.b.bg,day.blend);
    direction.set(day.x,day.y,day.z).normalize();
+   windowGlow=THREE.MathUtils.smoothstep(1.5-day.power,0,1.38);
   }
+  for(const item of windows){item.material.color.copy(item.color).lerp(windowColor,windowGlow*.65);item.material.emissive.copy(item.emissive).lerp(windowColor,windowGlow);item.material.emissiveIntensity=THREE.MathUtils.lerp(item.intensity,1.35,windowGlow);}
   if(!sphere)return;root.updateWorldMatrix(true,false);
   const moved=!lastMatrix?.equals(root.matrixWorld);
   if(!moved&&!switched&&(ar||time-lastShadow<(mobile?1500:900)))return;
@@ -52,6 +68,6 @@ export function townLighting(renderer,scene,mobile=false){
   const c=sun.shadow.camera;c.left=c.bottom=-extent;c.right=c.top=extent;c.near=radius*.1;c.far=radius*5;c.updateProjectionMatrix();
   sun.shadow.normalBias=radius*.0006;renderer.shadowMap.needsUpdate=true;
  }
- function dispose(){scene.remove(ambient,sun,sun.target);sun.shadow.dispose()}
+ function dispose(){clearWindows();scene.remove(ambient,sun,sun.target);sun.shadow.dispose()}
  return {attach,update,dispose};
 }
