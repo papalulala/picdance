@@ -62,7 +62,7 @@ export function Stage({works,serverOffset,energy,enterAR,resetView,onAR,onStatus
     const motion=dancerMotion(d.sequence,age,e);
     d.mesh.position.set(motion.x,motion.y,motion.z);
     d.uniforms.waveTime.value=motion.waveTime;d.uniforms.waveStrength.value=motion.waveStrength;
-    const fade=Math.min(1,age*3,Math.max(0,(60-age)*2));
+    const fade=Math.min(1,age*3,Math.max(0,(180-age)*2));
     d.mesh.scale.setScalar(fade*(1+Math.sin(age*5+d.sequence)*e*.1));
     root.getWorldQuaternion(d.mesh.quaternion).invert().multiply(renderer.xr.isPresenting?renderer.xr.getCamera().quaternion:camera.quaternion);
     d.mesh.rotateZ(motion.roll);
