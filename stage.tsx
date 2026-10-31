@@ -40,7 +40,7 @@ export function Stage({works,serverOffset,energy,enterAR,resetView,onAR,onStatus
     loader.load(w.image,tex=>{if(!alive||!dancers.has(w.id)){tex.dispose();return}tex.colorSpace=THREE.SRGBColorSpace;material.map=tex;material.needsUpdate=true;},undefined,()=>{if(alive)onStatus('部分作品載入失敗，請重新整理。')});
    }
   }
-  new GLTFLoader().load(new URL('./chiayi-v6.glb',document.baseURI).href,g=>{if(!alive){dispose(g.scene);return}root.add(g.scene);lights.attach(g.scene);modelReady=true;onStatus('');},undefined,()=>{if(alive)onStatus('小鎮載入失敗，請重新整理再試。')});
+  new GLTFLoader().load(new URL('./chiayi-v7.glb',document.baseURI).href,g=>{if(!alive){dispose(g.scene);return}root.add(g.scene);lights.attach(g.scene);modelReady=true;onStatus('');},undefined,()=>{if(alive)onStatus('小鎮載入失敗，請重新整理再試。')});
   const resize=()=>{const w=el.clientWidth,h=el.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()};resize();const ro=new ResizeObserver(resize);ro.observe(el);
   resetView.current=()=>{if(renderer.xr.isPresenting)return;camera.position.set(36,32,47);controls.target.set(0,1,-1);controls.update()};
   let session=null,hitSource=null,reference=null,placed=false;const reticle=new THREE.Mesh(new THREE.RingGeometry(.08,.10,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xdee9ae}));reticle.matrixAutoUpdate=false;reticle.visible=false;scene.add(reticle);
