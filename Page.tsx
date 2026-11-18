@@ -4,6 +4,8 @@ import type {CSSProperties} from 'react';
 import {Stage} from './stage';
 type Artwork={id:string;image:string;createdAt:number;seq:number};
 const colors=['#203e31','#ffffff','#ed684a','#e4b54e','#65a088','#6a91b6','#9977a9','#714d32'];
+const submissionCooldownKey='picdance:next-submit-at';
+function savedCooldown(){try{const value=Number(localStorage.getItem(submissionCooldownKey));return Number.isFinite(value)&&value>Date.now()?Math.min(value,Date.now()+180000):0}catch{return 0}}
 function TitleFireflies(){
  const [dots,setDots]=useState<{id:number;x:number;y:number;size:number;drift:number;duration:number}[]>([]);
  useEffect(()=>{
@@ -14,9 +16,11 @@ function TitleFireflies(){
  return <span className="title-fireflies" aria-hidden="true">{dots.map(dot=><i key={dot.id} className="title-firefly" style={{left:dot.x+'%',top:dot.y+'%',width:dot.size,height:dot.size,'--firefly-drift':dot.drift+'px',animationDuration:dot.duration+'s'} as CSSProperties}/>)}</span>;
 }
 export default function Page(){
- const canvas=useRef<HTMLCanvasElement>(null),drawing=useRef(false),last=useRef<{x:number,y:number}|null>(null),history=useRef<ImageData[]>([]),pendingId=useRef<string|null>(null),sendLock=useRef(false),lastSubmittedImage=useRef<string|null>(null);
+ const canvas=useRef<HTMLCanvasElement>(null),drawing=useRef(false),last=useRef<{x:number,y:number}|null>(null),history=useRef<ImageData[]>([]),pendingId=useRef<string|null>(null),sendLock=useRef(false),cooldownUntil=useRef(0);
  const [color,setColor]=useState(colors[0]),[size,setSize]=useState(9),[eraser,setEraser]=useState(false),[dirty,setDirty]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[works,setWorks]=useState<Artwork[]>([]),[online,setOnline]=useState(false),[room,setRoom]=useState('chiayi'),[clock,setClock]=useState(0),[now,setNow]=useState(Date.now()),[help,setHelp]=useState(false),[panel,setPanel]=useState(true),[audioName,setAudioName]=useState(''),[playing,setPlaying]=useState(false),[arStatus,setArStatus]=useState('正在檢查 AR'),[sceneStatus,setSceneStatus]=useState('正在走進木都…');
- const [submitted,setSubmitted]=useState(false);
+ const [nextSendAt,setNextSendAt]=useState(0);
+ function setCooldown(until:number){cooldownUntil.current=until;setNextSendAt(until);}
+ useEffect(()=>{setCooldown(savedCooldown());const syncCooldown=(event:StorageEvent)=>{if(event.key===submissionCooldownKey)setCooldown(savedCooldown())};window.addEventListener('storage',syncCooldown);return()=>window.removeEventListener('storage',syncCooldown)},[]);
  const energy=useRef(0),audioRef=useRef<HTMLAudioElement|null>(null),audioCtx=useRef<AudioContext|null>(null),analyser=useRef<AnalyserNode|null>(null),enterAR=useRef<null|(()=>Promise<void>)>(null),resetView=useRef<null|(()=>void)>(null),audioUrl=useRef('');
  useEffect(()=>{const q=new URLSearchParams(location.search).get('room');if(q&&/^[a-zA-Z0-9_-]{1,32}$/.test(q))setRoom(q);const c=canvas.current!;const ctx=c.getContext('2d')!;ctx.lineCap='round';ctx.lineJoin='round';return()=>{audioRef.current?.pause();if(audioUrl.current)URL.revokeObjectURL(audioUrl.current);audioCtx.current?.close();};},[]);
  function accept(data:any){if(!Array.isArray(data.artworks))throw Error();setWorks(data.artworks);setClock(data.serverTime-Date.now());setOnline(true);}
@@ -24,22 +28,25 @@ export default function Page(){
  useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),250);return()=>clearInterval(id)},[]);
  useEffect(()=>{let frame=0;function tick(){if(analyser.current&&playing){const a=new Uint8Array(analyser.current.frequencyBinCount);analyser.current.getByteFrequencyData(a);energy.current=a.slice(0,24).reduce((a,b)=>a+b,0)/(24*255);}else energy.current=0;frame=requestAnimationFrame(tick);}tick();return()=>cancelAnimationFrame(frame)},[playing]);
  const visible=works.filter(w=>w.createdAt+180000>now+clock);
+ const waitSeconds=Math.max(0,Math.ceil((nextSendAt-now)/1000));
+ const waitLabel=Math.floor(waitSeconds/60)+':'+String(waitSeconds%60).padStart(2,'0');
  function point(e:React.PointerEvent<HTMLCanvasElement>){const b=e.currentTarget.getBoundingClientRect();return{x:(e.clientX-b.left)*512/b.width,y:(e.clientY-b.top)*512/b.height};}
  function snapshot(){const ctx=canvas.current!.getContext('2d')!;history.current.push(ctx.getImageData(0,0,512,512));if(history.current.length>20)history.current.shift();pendingId.current=null;}
- function stroke(e:React.PointerEvent<HTMLCanvasElement>,start=false){if(busy||sendLock.current)return;const ctx=e.currentTarget.getContext('2d')!,p=point(e);if(start){snapshot();drawing.current=true;e.currentTarget.setPointerCapture(e.pointerId);last.current=p;}if(!drawing.current)return;ctx.globalCompositeOperation=eraser?'destination-out':'source-over';ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=size;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(last.current!.x,last.current!.y);ctx.lineTo(p.x,p.y);ctx.stroke();if(start){ctx.beginPath();ctx.arc(p.x,p.y,size/2,0,Math.PI*2);ctx.fill();}last.current=p;setDirty(true);setSubmitted(false);}
+ function stroke(e:React.PointerEvent<HTMLCanvasElement>,start=false){if(busy||sendLock.current)return;const ctx=e.currentTarget.getContext('2d')!,p=point(e);if(start){snapshot();drawing.current=true;e.currentTarget.setPointerCapture(e.pointerId);last.current=p;}if(!drawing.current)return;ctx.globalCompositeOperation=eraser?'destination-out':'source-over';ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=size;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(last.current!.x,last.current!.y);ctx.lineTo(p.x,p.y);ctx.stroke();if(start){ctx.beginPath();ctx.arc(p.x,p.y,size/2,0,Math.PI*2);ctx.fill();}last.current=p;setDirty(true);}
  function recalc(){const d=canvas.current!.getContext('2d')!.getImageData(0,0,512,512).data;setDirty(d.some((v,i)=>i%4===3&&v>0));}
- function undo(){const image=history.current.pop();if(image){canvas.current!.getContext('2d')!.putImageData(image,0,0);pendingId.current=null;setSubmitted(false);recalc();}}
- function clear(){snapshot();canvas.current!.getContext('2d')!.clearRect(0,0,512,512);setDirty(false);setSubmitted(false);}
+ function undo(){const image=history.current.pop();if(image){canvas.current!.getContext('2d')!.putImageData(image,0,0);pendingId.current=null;recalc();}}
+ function clear(){snapshot();canvas.current!.getContext('2d')!.clearRect(0,0,512,512);setDirty(false);}
  async function send(){
-  if(!dirty||submitted||sendLock.current||drawing.current)return;sendLock.current=true;setBusy(true);setMessage('');
+  const until=Math.max(cooldownUntil.current,savedCooldown());if(until>Date.now()){setCooldown(until);return}
+  if(!dirty||sendLock.current||drawing.current)return;sendLock.current=true;setBusy(true);setMessage('');
   try{
    const small=document.createElement('canvas');small.width=small.height=256;small.getContext('2d')!.drawImage(canvas.current!,0,0,256,256);const image=small.toDataURL('image/png');
    if(image.length>130000)throw Error('這張畫的細節太多，請簡化後再送出。');
-   if(image===lastSubmittedImage.current){setSubmitted(true);setMessage('這張作品已送出，修改畫作後才能再次送出。');return}
    const id=pendingId.current??crypto.randomUUID();pendingId.current=id;
    const r=await fetch('https://picdance.easyflame18.chatgpt.site/api/artworks?room='+encodeURIComponent(room),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,image})});const data:any=await r.json();
-   if(!r.ok)throw Error(data.error||'送出失敗，請再試一次。');accept(data);lastSubmittedImage.current=image;setSubmitted(true);
-   setMessage(data.duplicate?'這張作品已在木都中，沒有重複加入。':'你的作品已加入木都，一起跳舞吧！修改畫作後可再次送出。');
+   if(!r.ok)throw Error(data.error||'送出失敗，請再試一次。');accept(data);pendingId.current=null;
+   const next=Date.now()+180000;setCooldown(next);setNow(Date.now());try{localStorage.setItem(submissionCooldownKey,String(next))}catch{}
+   setMessage(data.duplicate?'這張作品已在木都中，三分鐘後可再次送出。':'你的作品已加入木都，一起跳舞吧！三分鐘後可再次送出。');
   }catch(e:any){setMessage(e.message||'連線中斷，畫作已保留。');}finally{sendLock.current=false;setBusy(false)}
  }
  async function loadAudio(file:File){if(!file)return;audioRef.current?.pause();if(audioUrl.current)URL.revokeObjectURL(audioUrl.current);audioUrl.current=URL.createObjectURL(file);if(!audioRef.current){const audio=new Audio();audioRef.current=audio;audio.onended=()=>setPlaying(false);audio.onerror=()=>{setPlaying(false);setMessage('無法播放這個音樂檔案，請換一個。')};}audioRef.current.src=audioUrl.current;setAudioName(file.name);setPlaying(false);}
@@ -52,7 +59,7 @@ export default function Page(){
   <aside className={'draw-panel '+(!panel?'collapsed':'')}><div className="panel-heading"><div><span className="eyebrow">YOUR LITTLE DANCER</span><h2>今天，想畫什麼？</h2></div><button className="text-button" onClick={()=>setPanel(!panel)}>{panel?'收起':'開始畫畫 ↗'}</button></div><div className="panel-content"><div className="canvas-wrap"><canvas ref={canvas} width={512} height={512} aria-label="自由繪圖板" onPointerDown={e=>stroke(e,true)} onPointerMove={e=>stroke(e)} onPointerUp={()=>{drawing.current=false;last.current=null;recalc()}} onPointerCancel={()=>{drawing.current=false;last.current=null;recalc()}}/>{!dirty&&<div className="canvas-hint"><span>✳</span>在這裡畫下你的想像<small>滑鼠或手指都可以</small></div>}</div>
   <div className="palette">{colors.map(c=><button key={c} aria-label={'畫筆顏色 '+c} aria-pressed={!eraser&&color===c} style={{background:c}} className={!eraser&&color===c?'selected':''} onClick={()=>{setColor(c);setEraser(false)}} disabled={busy}/>)}</div>
   <div className="tools"><label>筆刷大小 <input aria-label="筆刷大小" type="range" min="3" max="32" value={size} onChange={e=>setSize(+e.target.value)} disabled={busy}/></label><button className={eraser?'active':''} onClick={()=>setEraser(!eraser)} disabled={busy} aria-pressed={eraser}>橡皮擦</button><button onClick={undo} disabled={busy||!history.current.length}>復原</button><button onClick={clear} disabled={busy||!dirty}>清空</button></div>
-  <button className="send" disabled={!dirty||busy||submitted||!online} onClick={send}>{busy?'正在走進木都…':submitted?'已送出':'送進木都，開始跳舞'}<span>↗</span></button><p className="fine">停留 180 秒 · 滿 50 張時，最早的作品先離場</p><div className="message" role="status">{message}</div></div></aside>
+  <button className="send" disabled={!dirty||busy||waitSeconds>0||!online} onClick={send}>{busy?'正在走進木都…':waitSeconds>0?'已送出 · '+waitLabel:'送進木都，開始跳舞'}<span>↗</span></button><p className="fine">停留 180 秒 · 每次送出須間隔 3 分鐘 · 最多 50 張</p><div className="message" role="status">{message}</div></div></aside>
   {!online&&<div className="connection" role="status">共同場景暫未連線。你可以先畫畫，連線後再送出。</div>}
   <footer><div className="audio"><button className={'play '+(playing?'on':'')} onClick={toggleAudio} aria-label={playing?'暫停音樂':'播放音樂'}>{playing?'Ⅱ':'▶'}</button><label className="music-picker"><strong>{audioName||'為木都加一點節奏'}</strong><span>{audioName?'更換音樂 · 僅在這台裝置播放':'選擇音樂 · 跟著節拍跳舞'}</span><input type="file" accept="audio/*" onChange={e=>e.target.files?.[0]&&loadAudio(e.target.files[0])}/></label></div><div className="view-tools"><button onClick={()=>resetView.current?.()}>重設視角</button><button disabled={!enterAR.current} onClick={()=>enterAR.current?.().catch(()=>setMessage('AR 開啟失敗，請確認相機權限與裝置支援。'))}>{arStatus}</button></div></footer>
   {sceneStatus&&<div className="scene-status" role="status">{sceneStatus}</div>}
